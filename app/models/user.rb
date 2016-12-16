@@ -20,14 +20,17 @@ class User < ApplicationRecord
   validates :postcode, presence: true, on: :update
   validates :employment, presence: true, on: :update
   validates :date_of_birth, presence: true, on: :update
+  validates :email, presence: { message: 'Email can only be edited - not deleted' },
+            if: -> {email_was.present?},
+            on: :update
 
   def email_required?
     false
   end
 
-  def email_changed?
-    false
-  end
+  # def email_changed?
+  #   false
+  # end
 
   mount_uploader :photo_id, PhotoUploader
   # def self.find_for_facebook_oauth(auth)
@@ -49,6 +52,10 @@ class User < ApplicationRecord
   #   return user
   # end
 
+  def full_name
+    (first_name + ' ' + last_name).titleize
+  end
+
   def update_with_facebook(auth)
     user_params = auth.to_h.slice(:provider, :uid)
     user_params.merge! auth.info.slice(:email, :first_name, :last_name)
@@ -57,24 +64,6 @@ class User < ApplicationRecord
     user_params[:token] = auth.credentials.token
     user_params[:token_expiry] = Time.at(auth.credentials.expires_at)
     self.update(user_params)
-  end
-
-
-  # SMS MESSAGE METHODS
-
-  def confirm_loan
-    body = "Thank you for confirming your loan\
-            (amount: #{ActionController::Base.helpers.humanized_money_with_symbol(loans.last.agreed_amount)}).
-            Your e-wallet will be credited shortly!
-            Your next payment:
-            #{ActionController::Base.helpers.humanized_money_with_symbol(loans.last.next_payment.amount)} on #{loans.last.next_payment.due_date.strftime("%e %b %Y")}"
-    Notification.send_sms(mobile_number, body.squish)
-  end
-
-  def decline_loan
-    body = "You have chosen to decline your loan.
-            We hope you will consider reapplying in the future"
-    Notification.send_sms(mobile_number, body.squish)
   end
 
   def other_sms
@@ -97,7 +86,6 @@ class User < ApplicationRecord
               on #{loans.last.try(next_payment).try(due_date).try(strftime("%e %b %Y"))}
               We will remind you one week before your payment date."
     end
-    Notification.send_sms(mobile_number, body.squish)
+    SmsJob.perform_later(mobile_number, body.squish)
   end
-
 end

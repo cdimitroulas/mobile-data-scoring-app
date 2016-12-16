@@ -1,7 +1,7 @@
 class UsersController < ApplicationController
 
   # Authentication is on user not bank_user in this case
-  skip_before_filter :authenticate_bank_user!
+  skip_before_action :authenticate_bank_user!
 
   before_action :set_user, only: [:show, :edit, :update]
   before_action :set_user_id, only: [:status, :profile, :share]
@@ -16,13 +16,19 @@ class UsersController < ApplicationController
 
   def update
     authorize @user
+
+    # Checks if user email has been changed
+    @user.email = params[:user][:email]
+    send_email = @user.email_changed?
+
     if @user.update(user_params)
-      if @user.photo_id
+      UserMailer.email_has_changed(@user).deliver_later if send_email
+      if @user.photo_id.metadata.present?
         @user.update(details_completed: true)
+        redirect_to user_path(@user)
       else
-        @user.update(details_completed: false)
+        redirect_to user_profile_path(@user)
       end
-      redirect_to user_path(@user)
     else
       render :edit
     end

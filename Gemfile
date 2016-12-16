@@ -51,6 +51,14 @@ gem 'bootstrap3-datetimepicker-rails', '~> 4.17.43'
 gem 'chartkick'
 gem 'highcharts-rails'
 
+# Email stuff
+gem 'letter_opener', group: :development
+
+# Background job gems
+gem 'sidekiq'
+gem 'sidekiq-failures'
+gem 'sinatra', '>= 2.0.0.beta2', require: false
+
 gem 'sass-rails'
 gem 'jquery-rails'
 gem 'uglifier'
@@ -60,8 +68,11 @@ gem 'simple_form'
 gem 'autoprefixer-rails'
 
 group :development, :test do
-  gem 'binding_of_caller'
-  gem 'better_errors'
+  gem 'capybara'
+  gem 'poltergeist'
+  gem 'launchy'
+  gem 'rspec-rails', '~> 3.5'
+  gem 'factory_girl_rails'
 
   gem 'pry-byebug'
   gem 'pry-rails'
@@ -70,4 +81,11 @@ group :development, :test do
   gem 'spring-watcher-listen', '~> 2.0.0'
 end
 
+group :test do
+  gem 'database_cleaner'
+end
 
+group :development do
+  gem 'binding_of_caller'
+  gem 'better_errors'
+end

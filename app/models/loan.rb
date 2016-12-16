@@ -7,6 +7,8 @@ class Loan < ApplicationRecord
   monetize :proposed_amount_cents
   monetize :agreed_amount_cents
 
+  validates :bank_id, presence: true
+  validates :user_id, presence: true
   validates :requested_amount, presence: true,
               numericality: { less_than_or_equal_to: 15000, greater_than: 0 }
   validates :category, presence: true
@@ -14,6 +16,7 @@ class Loan < ApplicationRecord
   validates :description, presence: true,
               length: { minimum: 20,
               too_short: "You need to exceed %{count} characters in your description" }
+  validate :when_declining_a_loan, on: :update
 
   ## PAYMENT METHODS
 
@@ -27,13 +30,22 @@ class Loan < ApplicationRecord
     payments.where('due_date < ?', DateTime.now).last
   end
 
-  # Calculate the amount owed (sum of unpaid payments)
   def amount_owed
     amount = 0
-    payments.where('due_date < ?', DateTime.now).where(paid: false).each do |payment|
-      amount += payment.amount
+    payments.each do |payment|
+      amount += payment.amount unless payment.paid
     end
     return amount
+  end
+
+  def amount_overdue
+    amount_overdue = 0
+    payments.each do |p|
+      if p.due_date < DateTime.now && p.paid == false
+        amount_overdue += p.amount
+      end
+    end
+    amount_overdue
   end
 
   # Calculate the remaining capital on the loan
@@ -42,7 +54,7 @@ class Loan < ApplicationRecord
     payments.each do |payment|
       payments_total += payment.amount if payment.paid == true
     end
-    agreed_amount - payments_total
+    payments.to_a.reduce(0) { |sum, p| sum += p.amount } - payments_total
   end
 
   # Calculate the total repaid capital
@@ -52,6 +64,11 @@ class Loan < ApplicationRecord
       sum += payment.amount if payment.paid == true
     end
     return sum
+  end
+
+  # Total loan capital to be repaid
+  def total_capital
+    payments.reduce(0) { |sum, p| sum += p.amount }
   end
 
   ## LOAN FILTERS
@@ -121,11 +138,11 @@ class Loan < ApplicationRecord
     update_payments_to_agreed_amount
   end
 
-  def application_sent_confirmation
-    body = "Your loan application for
-            #{ActionController::Base.helpers.humanized_money_with_symbol(requested_amount)}
-            has been sent successfully.
-            You will receive another message once it has been reviewed."
-    Notification.send_sms(user.mobile_number, body.squish)
+  protected
+
+  def when_declining_a_loan
+    if status_was == "Application Pending" && status == "Application Declined"
+      errors.add(:decline_reason, "Please enter a reason for declining the application") if decline_reason.blank?
+    end
   end
 end

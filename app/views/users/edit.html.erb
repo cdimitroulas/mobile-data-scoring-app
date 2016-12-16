@@ -18,8 +18,7 @@
           <%= f.input :email,
             input_html: { class: 'input-rounded'},
             placeholder: "Email (not required)",
-            label: false,
-            error: "Please enter a valid email" %>
+            label: false%>
           <%= f.input :title,
             as: 'radio_buttons',
             collection: [['Mr', 'male'], ['Mrs', 'female'], ['Ms', 'female']],
@@ -59,12 +58,12 @@
             input_html: { class: 'input-rounded'},
             placeholder: 'Date of Birth',
             label: false,
-            error: "Please enter your date of birth" %>
+            error: "Please enter your date of birth (DD/MM/YYYY)" %>
           <%= f.input :photo_id,
             input_html: { class: 'input-rounded'},
             label: 'Upload your ID' %>
           <%= f.input :photo_id_cache, as: :hidden %>
-          <% if @user.photo_id.present? %>
+          <% if @user.photo_id.metadata.present? %>
             <%= image_tag @user.photo_id, height: 300, width: 400 %>
           <% end %>
           <%= f.submit 'Save', class: 'btn btn-royal-blue', style: "width: 100%" %>
